@@ -1,0 +1,25 @@
+{
+  "songQueue": [],
+  "songHistory": [
+    {
+      "id": "1741627950673",
+      "song": "https://www.youtube.com/watch?v=XkDlfMP3GIQ",
+      "songTitle": "Ayaş Güzeli",
+      "songDuration": "6:16",
+      "requestedBy": "Otomatik Liste",
+      "requestedAt": "2025-03-10T17:32:30.673Z"
+    },
+    {
+      "id": "1741627937536",
+      "song": "https://www.youtube.com/watch?v=sfzbffvyJ40",
+      "songTitle": "Bir Şişe Şarap",
+      "songDuration": "3:54",
+      "requestedBy": "Otomatik Liste",
+      "requestedAt": "2025-03-10T17:32:17.536Z"
+    }
+  ],
+  "chatHistory": [],
+  "headerColor": "#212529",
+  "youtubeApiKey": null,
+  "backupDate": "2025-03-10T17:33:16.491Z"
+}

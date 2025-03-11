@@ -1,0 +1,33 @@
+.app-container {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Mobil stiller */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+  
+  .card {
+    margin-bottom: 15px;
+  }
+}
+
+/* Responsive yükseklik ayarlamaları */
+@media (max-height: 800px) {
+  .bg-light {
+    height: 300px !important;
+  }
+}
+
+@media (max-height: 600px) {
+  .bg-light {
+    height: 200px !important;
+  }
+}

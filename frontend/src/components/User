@@ -1,0 +1,216 @@
+import React, { useState, useEffect, useRef } from 'react';
+import io from 'socket.io-client';
+import axios from 'axios';
+
+const ENDPOINT = 'http://localhost:5000';
+let socket;
+
+const UserPanel = () => {
+  const [username, setUsername] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [songRequest, setSongRequest] = useState('');
+  const [chatMessage, setChatMessage] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [activeUsers, setActiveUsers] = useState([]);
+  const [currentSong, setCurrentSong] = useState(null);
+  const [volume, setVolume] = useState(50);
+  
+  const messagesEndRef = useRef(null);
+
+  // Socket.io bağlantısını kur
+  useEffect(() => {
+    socket = io(ENDPOINT);
+    
+    // Bağlantı başarılı olduğunda
+    socket.on('connect', () => {
+      console.log('Socket.io bağlantısı kuruldu!');
+    });
+
+    // Başlangıç durumunu al
+    socket.on('initialState', ({ currentSong, activeUsers }) => {
+      if (currentSong) setCurrentSong(currentSong);
+      setActiveUsers(activeUsers);
+    });
+
+    // Aktif kullanıcılar güncellendiğinde
+    socket.on('updateActiveUsers', (users) => {
+      setActiveUsers(users);
+    });
+
+    // Yeni sohbet mesajı geldiğinde
+    socket.on('newChatMessage', (message) => {
+      setMessages((prevMessages) => [...prevMessages, message]);
+    });
+
+    // Çalan şarkı güncellendiğinde
+    socket.on('updateCurrentSong', (song) => {
+      setCurrentSong(song);
+    });
+
+    // Bağlantı kapandığında temizle
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  // Mesajlar güncellendiğinde otomatik olarak aşağı kaydır
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Kullanıcı girişi
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (username.trim()) {
+      socket.emit('setUsername', username);
+      setIsLoggedIn(true);
+    }
+  };
+
+  // Şarkı isteği gönder
+  const handleSongRequest = (e) => {
+    e.preventDefault();
+    if (songRequest.trim()) {
+      socket.emit('requestSong', songRequest);
+      setSongRequest('');
+    }
+  };
+
+  // Sohbet mesajı gönder
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (chatMessage.trim()) {
+      socket.emit('chatMessage', chatMessage);
+      setChatMessage('');
+    }
+  };
+
+  // Ses seviyesini değiştir
+  const handleVolumeChange = (e) => {
+    setVolume(e.target.value);
+    // Burada gerçek ses kontrolü yapılacak (ileride YouTube API kullanılarak)
+  };
+
+  // Kullanıcı henüz giriş yapmadıysa login ekranını göster
+  if (!isLoggedIn) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
+          <h1 className="text-2xl font-bold mb-6 text-center">Müzik İstek Platformu</h1>
+          <form onSubmit={handleLogin}>
+            <div className="mb-4">
+              <label htmlFor="username" className="block text-gray-700 mb-2">Kullanıcı Adınız</label>
+              <input
+                type="text"
+                id="username"
+                className="input"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Kullanıcı adınızı girin"
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary w-full">Giriş Yap</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Sol Panel: Şarkı bilgisi ve istek formu */}
+        <div className="main-panel md:col-span-1">
+          <h2 className="text-xl font-bold mb-4">Çalan Şarkı</h2>
+          {currentSong ? (
+            <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+              <p className="font-bold">{currentSong.song}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                İsteyen: {currentSong.requestedBy}
+              </p>
+            </div>
+          ) : (
+            <p className="text-gray-500">Şu anda çalan şarkı yok</p>
+          )}
+
+          <div className="mb-4">
+            <label htmlFor="volume" className="block mb-2">Ses Seviyesi: {volume}%</label>
+            <input
+              type="range"
+              id="volume"
+              min="0"
+              max="100"
+              value={volume}
+              onChange={handleVolumeChange}
+              className="w-full"
+            />
+          </div>
+          
+          <h2 className="text-xl font-bold mb-4">Şarkı İsteği</h2>
+          <form onSubmit={handleSongRequest}>
+            <div className="mb-3">
+              <input
+                type="text"
+                className="input"
+                value={songRequest}
+                onChange={(e) => setSongRequest(e.target.value)}
+                placeholder="Şarkı adı veya YouTube linki"
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary w-full">İstek Gönder</button>
+          </form>
+        </div>
+        
+        {/* Orta Panel: Sohbet */}
+        <div className="main-panel md:col-span-1">
+          <h2 className="text-xl font-bold mb-4">Sohbet</h2>
+          <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 h-96 overflow-y-auto mb-4">
+            {messages.length > 0 ? (
+              messages.map((msg) => (
+                <div key={msg.id} className="mb-2">
+                  <p className="font-bold">{msg.sender}:</p>
+                  <p className="pl-2">{msg.text}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500">Henüz mesaj yok</p>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          <form onSubmit={handleSendMessage}>
+            <div className="flex">
+              <input
+                type="text"
+                className="input flex-grow mr-2"
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                placeholder="Mesajınızı yazın"
+              />
+              <button type="submit" className="btn btn-primary">Gönder</button>
+            </div>
+          </form>
+        </div>
+        
+        {/* Sağ Panel: Aktif kullanıcılar */}
+        <div className="main-panel md:col-span-1">
+          <h2 className="text-xl font-bold mb-4">Aktif Kullanıcılar ({activeUsers.length})</h2>
+          <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 h-96 overflow-y-auto">
+            {activeUsers.length > 0 ? (
+              activeUsers.map((user) => (
+                <div key={user.id} className="mb-2 p-2 bg-white dark:bg-gray-600 rounded">
+                  <p>{user.username}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500">Aktif kullanıcı yok</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default UserPanel;
